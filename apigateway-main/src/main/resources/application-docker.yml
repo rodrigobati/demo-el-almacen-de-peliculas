@@ -22,33 +22,44 @@ spring:
 
   cloud:
     gateway:
-      server:
-        webflux:
-          globalcors:
-            cors-configurations:
-              "[/**]":
-                allowedOrigins: "http://localhost:5173"
-                allowedMethods: "*"
-                allowedHeaders: "*"
-                exposedHeaders: "Authorization"
-                allowCredentials: true
-          routes:
-            - id: catalogo
-              uri: http://catalogo-backend:8080
-              predicates:
-                - Path=/api/peliculas/**
-              filters:
-                - StripPrefix=1
-            - id: rating
-              uri: http://rating-service:8080
-              predicates:
-                - Path=/api/ratings/**
-              filters:
-                - StripPrefix=1
-            - id: keycloak
-              uri: http://keycloak:8080
-              predicates:
-                - Path=/auth/**,/realms/**
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowedOrigins: "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: catalogo
+          uri: http://catalogo-backend:8081
+          predicates:
+            - Path=/api/peliculas/**
+          filters:
+            - StripPrefix=1
+        - id: categorias
+          uri: http://catalogo-backend:8081
+          predicates:
+            - Path=/api/categorias/**
+          filters:
+            - StripPrefix=1
+        - id: rating
+          uri: http://rating-service:8082
+          predicates:
+            - Path=/api/ratings/**
+          filters:
+            - StripPrefix=1
+        - id: keycloak
+          uri: http://keycloak:8080
+          predicates:
+            - Path=/auth/**,/realms/**
 
 eureka:
   client:

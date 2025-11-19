@@ -22,38 +22,34 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity
 public class SecurityConfiguration {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http
-                .cors(withDefaults())
-                .csrf(AbstractHttpConfigurer::disable);
+                http
+                                .cors(withDefaults())
+                                .csrf(AbstractHttpConfigurer::disable);
 
-        http.sessionManagement(sessionManagement ->
-                sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        );
+                http.sessionManagement(sessionManagement -> sessionManagement
+                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        http
-                .authorizeHttpRequests(registry -> registry
-                        .requestMatchers("/actuator/**", "/metrics/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2Configurer -> 
-                        oauth2Configurer.jwt(jwtConfigurer -> 
-                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                http
+                                .authorizeHttpRequests(registry -> registry
+                                                .requestMatchers("/actuator/**", "/metrics/**").permitAll()
+                                                // Permitir todas las peticiones ya que el API Gateway ya validó el JWT
+                                                .anyRequest().permitAll());
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Bean
-    GrantedAuthorityDefaults grantedAuthorityDefaults() {
-        return new GrantedAuthorityDefaults(""); // Remove the ROLE_ prefix
-    }
+        @Bean
+        GrantedAuthorityDefaults grantedAuthorityDefaults() {
+                return new GrantedAuthorityDefaults(""); // Remove the ROLE_ prefix
+        }
 
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(new KeycloakGrantedAuthoritiesConverter());
-        return converter;
-    }
+        @Bean
+        public JwtAuthenticationConverter jwtAuthenticationConverter() {
+                JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+                converter.setJwtGrantedAuthoritiesConverter(new KeycloakGrantedAuthoritiesConverter());
+                return converter;
+        }
 }

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/ratings")
+@RequestMapping("/ratings")
 public class RatingController {
 
     private final RatingService service;
@@ -22,11 +22,9 @@ public class RatingController {
 
     @PostMapping
     public ResponseEntity<RatingResponseDto> crear(
-            @RequestBody RatingRequestDto req,
-            @AuthenticationPrincipal(errorOnInvalidType = false) Jwt jwt) {
-        // Extraer el userId del JWT (claim "sub" contiene el ID de usuario de Keycloak)
-        // Para testing sin auth, usar un ID fijo si jwt es null
-        String usuarioId = (jwt != null) ? jwt.getSubject() : "test-user-123";
+            @RequestBody RatingRequestDto req) {
+        // El usuarioId viene del frontend después de autenticación con Keycloak
+        String usuarioId = req.usuarioId != null ? req.usuarioId : "anonymous";
         Rating rating = RatingMapper.toModel(req, usuarioId);
         Rating saved = service.createRating(rating);
         return ResponseEntity.ok(RatingMapper.toDto(saved));

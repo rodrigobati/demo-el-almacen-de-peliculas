@@ -30,8 +30,9 @@ public class Rating {
     static final String ERROR_USUARIO_OBLIGATORIO = "El id del usuario es obligatorio";
     static final String ERROR_COMENTARIO_VACIO = "El comentario no puede estar vacío si se proporciona";
 
-    public Rating(Long peliculaId2, String usuarioId2, int valor, String comentario2) {
-        // sólo JPA
+    // Constructor sin parámetros requerido por JPA/Hibernate
+    protected Rating() {
+        // sólo para JPA
     }
 
     private Rating(Long peliculaId,
