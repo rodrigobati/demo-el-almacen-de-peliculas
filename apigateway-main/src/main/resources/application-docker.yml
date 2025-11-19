@@ -1,0 +1,55 @@
+# Puerto en el que se ejecuta el API Gateway
+server:
+  port: 9500
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+
+spring:
+  application.name: api-gateway
+
+  # Configuración de OAuth2 Resource Server (JWT)
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/videoclub
+          jwk-set-uri: http://keycloak:8080/realms/videoclub/protocol/openid-connect/certs
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              "[/**]":
+                allowedOrigins: "http://localhost:5173"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                exposedHeaders: "Authorization"
+                allowCredentials: true
+          routes:
+            - id: catalogo
+              uri: http://catalogo-backend:8080
+              predicates:
+                - Path=/api/peliculas/**
+              filters:
+                - StripPrefix=1
+            - id: rating
+              uri: http://rating-service:8080
+              predicates:
+                - Path=/api/ratings/**
+              filters:
+                - StripPrefix=1
+            - id: keycloak
+              uri: http://keycloak:8080
+              predicates:
+                - Path=/auth/**,/realms/**
+
+eureka:
+  client:
+    enabled: false

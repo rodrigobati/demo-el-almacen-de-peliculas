@@ -1,0 +1,184 @@
+services:
+  # ============================================
+  # Infraestructura Compartida
+  # ============================================
+  
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: shared-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"   # Puerto AMQP
+      - "15672:15672" # Puerto Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - peliculas-net
+
+  # ============================================
+  # Vertical Catálogo
+  # ============================================
+  
+  catalogo-mysql:
+    image: mysql:8.4
+    container_name: catalogo-mysql
+    environment:
+      MYSQL_DATABASE: almacen_peliculas
+      MYSQL_USER: almacen
+      MYSQL_PASSWORD: almacen
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - catalogo-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ualmacen", "-palmacen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - peliculas-net
+
+  catalogo-backend:
+    build: ./el-almacen-de-peliculas-online/el-almacen-de-peliculas-online
+    image: catalogo-backend:latest
+    container_name: catalogo-backend
+    depends_on:
+      catalogo-mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      SPRING_PROFILES_ACTIVE: mysql
+      SPRING_DATASOURCE_URL: jdbc:mysql://catalogo-mysql:3306/almacen_peliculas?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: almacen
+      SPRING_DATASOURCE_PASSWORD: almacen
+      # RabbitMQ configuration (propiedades estándar de Spring Boot)
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      # Custom properties
+      RABBITMQ_EVENT_EXCHANGE_NAME: exchange_videocloud00
+    networks:
+      - peliculas-net
+
+  # ============================================
+  # Vertical Rating
+  # ============================================
+  
+  rating-mysql:
+    image: mysql:8
+    container_name: rating-mysql
+    environment:
+      MYSQL_DATABASE: almacen_peliculas_rating
+      MYSQL_USER: rating_user
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3308:3306"
+    volumes:
+      - rating-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - peliculas-net
+
+  rating-service:
+    build: ./el-almacen-de-peliculas-online-rating
+    image: rating-service:latest
+    container_name: rating-service
+    depends_on:
+      rating-mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      # Override database connection
+      SPRING_DATASOURCE_URL: jdbc:mysql://rating-mysql:3306/almacen_peliculas_rating?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: rating_user
+      SPRING_DATASOURCE_PASSWORD: secret
+      # RabbitMQ configuration
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      # Exchange configuration
+      RATING_RABBITMQ_EXCHANGE: exchange_videocloud00
+    networks:
+      - peliculas-net
+
+  # ============================================
+  # Keycloak (SSO)
+  # ============================================
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: keycloak-sso
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-mem
+    ports:
+      - "9090:8080"
+    volumes:
+      - ./springboot-sso/docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - peliculas-net
+
+  # ============================================
+  # API Gateway
+  # ============================================
+  
+  api-gateway:
+    build: ./apigateway-main
+    image: api-gateway:latest
+    container_name: api-gateway
+    depends_on:
+      catalogo-backend:
+        condition: service_started
+      rating-service:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "9500:9500"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - peliculas-net
+
+networks:
+  peliculas-net:
+    driver: bridge
+
+volumes:
+  rabbitmq-data:
+  catalogo-mysql-data:
+  rating-mysql-data:
