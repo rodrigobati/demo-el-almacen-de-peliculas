@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: almacen_peliculas_rating
+      MYSQL_USER: rating_user
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootpass # ver punto 3
+    volumes:
+      - rating-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - rating-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rating-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - rating-net
+
+  rating-service:
+    build: .
+    container_name: rating-service
+    depends_on:
+      - mysql
+      - rabbitmq
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8082:8082"
+    networks:
+      - rating-net
+
+networks:
+  rating-net:
+
+volumes:
+  rating-mysql-data:
+  rating-rabbitmq-data:
