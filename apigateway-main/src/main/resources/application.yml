@@ -41,13 +41,15 @@ spring:
               predicates:
                 - Path=/api/peliculas/** # Rutas de películas
               filters:
-                - StripPrefix=1 # Elimina /api del path
+                - SetRequestHeader=Host, localhost:9500 # Cambia esto al host de tu API Gateway
+                # - StripPrefix=1
             - id: rating # Servicio de Rating de Películas
               uri: http://localhost:8082 # Puerto del servicio Rating
               predicates:
                 - Path=/api/ratings/** # Rutas de ratings
               filters:
-                - StripPrefix=1 # Elimina /api del path
+                - SetRequestHeader=Host, localhost:9500 # Cambia esto al host de tu API Gateway
+                # - StripPrefix=1
             - id: keycloak # Servicio de autenticación Keycloak
               uri: http://localhost:9090 # Puerto de Keycloak
               predicates:
