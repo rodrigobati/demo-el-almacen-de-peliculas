@@ -440,6 +440,6 @@ demo-el-almacen-de-peliculas/
 
 ## 👥 Proyecto Académico
 
-Proyecto desarrollado para el **Taller de Tecnologías y Producción de Software** - UNRN
+Proyecto desarrollado por Rodrigo Damian Battillier y Agustín Fernández Gómez para el **Taller de Tecnologías y Producción de Software** - UNRN
 
 ##
